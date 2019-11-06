@@ -7,7 +7,10 @@
 
 #include <avr/io.h>
 
+const double A[8] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25};
 unsigned char button;
+unsigned char i;
+unsigned char isOn;
 
 // 0.954 hz is lowest frequency possible with this function,
 // based on settings in PWM_on()
@@ -49,98 +52,97 @@ void PWM_off() {
 	TCCR3B = 0x00;
 }
  
-enum States{wait, playC, playD, playE} state;
-	 
-void tick(){
-	switch(state){//transitions
-		case wait:
-			if(button == 0x00){
-				state = wait;
-				set_PWM(0);
-				break;
-			}
-			else if(button == 0x01){
-				state = playC;
-				set_PWM(261.63);
-				break;
-			}
-			else if(button == 0x02){
-				state = playD;
-				set_PWM(293.66);
-				break;
-			}
-			else if(button == 0x04){
-				state = playE;
-				set_PWM(329.63);
-				break;
-			}
-			else{
-				state = wait;
-				set_PWM(0);
-				break;
-			}
-			break;
-			
-		case playC:
-			if(button == 0x01){
-				state = playC;
-				break;
-			}
-			else{
-				state = wait;
-				set_PWM(0);
-				break;
-			}
-			break;
-			
-		case playD:
-		if(button == 0x02){
-			state = playD;
-			break;
-		}
-		else{
-			state = wait;
-			set_PWM(0);
-			break;
-		}
-		break;
-		
-		case playE:
-		if(button == 0x04){
-			state = playE;
-			break;
-		}
-		else{
-			state = wait;
-			set_PWM(0);
-			break;
-		}
-		break;		
-	}
-	switch(state){//actions
-		case wait:
-		break;
-		
-		case playC:
-		break;
-		
-		case playD:
-		break;
-		
-		case playE:
-		break;
-	}
-}
-	 
-int main(void)
-{
-    DDRA = 0x00;	PORTA = 0xFF;
-	DDRB = 0x40;	PORTB = 0x00;
-	PWM_on();
-	state = wait;
-    while (1) 
-    {
-		button = ~PINA & 0x07;
-		tick();
-    }
-}
+ enum States{off, wait, inc, dec} state;
+
+ void tick(){
+	 switch(state){//transition
+		 case off:
+		 if(button == 0x00){
+			 state = off;
+			 break;
+		 }
+		 else if(button == 0x01){
+			 state = wait;
+			 isOn = 1;
+			 PWM_on();
+			 break;
+		 }
+		 break;
+		 
+		 case wait:
+		 if(button == 0x00){
+			 state = wait;
+			 set_PWM(A[i]);
+			 break;
+		 }
+		 if(button == 0x01){
+			 if(isOn){
+				 state = off;
+				 PWM_off();
+				 break;
+			 }
+			 break;
+		 }
+		 if(button == 0x02){
+			 state = inc;
+			 if(i < 7){
+				 i = i + 1;
+				 set_PWM(A[i]);
+				 break;
+			 }
+		 }
+		 if(button == 0x04){
+			 state = dec;
+			 if(i > 0){
+				 i = i - 1;
+				 set_PWM(A[i]);
+				 break;
+			 }
+		 }
+		 break;
+		 case inc:
+		 if(button == 0x00){
+			 state = wait;
+			 break;
+		 }
+		 else{
+			 state = inc;
+			 break;
+		 }
+		 break;
+		 case dec:
+		 if(button == 0x00){
+			 state = wait;
+			 break;
+		 }
+		 else{
+			 state = dec;
+			 break;
+		 }
+		 break;
+	 }
+	 switch(state){//action
+		 case off:
+		 break;
+		 case wait:
+		 break;
+		 case inc:
+		 break;
+		 case dec:
+		 break;
+	 }
+ }
+
+ 
+ int main(void)
+ {
+	 DDRA = 0x00;	PORTA = 0xFF;
+	 DDRB = 0x40;	PORTB = 0x00;
+	 PWM_on();
+	 state = off;
+	 while (1)
+	 {
+		 button = ~PINA & 0x07;
+		 tick();
+	 }
+ }
